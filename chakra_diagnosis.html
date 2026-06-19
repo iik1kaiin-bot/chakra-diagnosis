@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>チャクラ診断</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+    background: linear-gradient(135deg, #1a0533 0%, #0d1f3c 50%, #0a1a2e 100%);
+    min-height: 100vh;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .container {
+    width: 100%;
+    max-width: 600px;
+  }
+
+  /* ===== 画面切り替え ===== */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ===== スタート画面 ===== */
+  .start-screen { text-align: center; padding: 40px 20px; }
+  .start-title {
+    font-size: 32px;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    margin-bottom: 12px;
+    background: linear-gradient(90deg, #c084fc, #818cf8, #67e8f9);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .start-subtitle {
+    font-size: 14px;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 0.1em;
+    margin-bottom: 48px;
+  }
+  .chakra-preview {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 48px;
+  }
+  .chakra-preview-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .chakra-preview-dot:nth-child(2) { animation-delay: 0.2s; }
+  .chakra-preview-dot:nth-child(3) { animation-delay: 0.4s; }
+  .chakra-preview-dot:nth-child(4) { animation-delay: 0.6s; }
+  .chakra-preview-dot:nth-child(5) { animation-delay: 0.8s; }
+  .chakra-preview-dot:nth-child(6) { animation-delay: 1.0s; }
+  .chakra-preview-dot:nth-child(7) { animation-delay: 1.2s; }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.3); opacity: 1; }
+  }
+  .start-desc {
+    font-size: 14px;
+    color: rgba(255,255,255,0.65);
+    line-height: 1.8;
+    margin-bottom: 40px;
+  }
+  .btn-start {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: #fff;
+    border: none;
+    padding: 16px 48px;
+    border-radius: 50px;
+    font-size: 16px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 24px rgba(124,58,237,0.4);
+  }
+  .btn-start:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(124,58,237,0.6);
+  }
+
+  /* ===== 質問画面 ===== */
+  .question-screen { padding: 20px 0; }
+  .progress-bar-wrap {
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    height: 4px;
+    margin-bottom: 32px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #c084fc, #818cf8);
+    transition: width 0.4s ease;
+  }
+  .question-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .chakra-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+  .chakra-badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .question-num {
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+    margin-left: auto;
+    letter-spacing: 0.05em;
+  }
+  .question-text {
+    font-size: 20px;
+    font-weight: 300;
+    line-height: 1.6;
+    margin-bottom: 32px;
+    letter-spacing: 0.03em;
+  }
+  .choices { display: flex; flex-direction: column; gap: 12px; }
+  .choice-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 16px 20px;
+    color: #fff;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .choice-btn:hover {
+    background: rgba(255,255,255,0.14);
+    border-color: rgba(255,255,255,0.28);
+    transform: translateX(4px);
+  }
+  .choice-score {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  /* ===== 結果画面 ===== */
+  .result-screen { padding: 20px 0; }
+  .result-title {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    margin-bottom: 6px;
+    background: linear-gradient(90deg, #c084fc, #818cf8, #67e8f9);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .result-subtitle {
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.1em;
+    margin-bottom: 32px;
+  }
+
+  /* ハイライト */
+  .highlight-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .highlight-card {
+    border-radius: 14px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .highlight-card.strong {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .highlight-card.weak {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .highlight-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 6px;
+  }
+  .highlight-name {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .highlight-pct {
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+  }
+
+  /* 人体＋チャクラ図 */
+  .body-figure-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+  .body-figure-wrap svg { overflow: visible; }
+
+  /* チャクラスコアバー一覧 */
+  .chakra-bars { margin-bottom: 32px; }
+  .chakra-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .chakra-bar-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .chakra-bar-name {
+    font-size: 12px;
+    color: rgba(255,255,255,0.7);
+    width: 90px;
+    flex-shrink: 0;
+  }
+  .chakra-bar-track {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .chakra-bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.8s ease;
+  }
+  .chakra-bar-pct {
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+    width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* アドバイスカード */
+  .advice-section-title {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .advice-cards { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+  .advice-card {
+    border-radius: 14px;
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+  }
+  .advice-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .advice-card-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .advice-card-name {
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .advice-card-pct {
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    margin-left: auto;
+  }
+  .advice-card-text {
+    font-size: 13px;
+    color: rgba(255,255,255,0.65);
+    line-height: 1.7;
+  }
+
+  .btn-retry {
+    display: block;
+    width: 100%;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 50px;
+    padding: 14px;
+    color: #fff;
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .btn-retry:hover {
+    background: rgba(255,255,255,0.15);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- スタート画面 -->
+  <div class="screen active" id="screen-start">
+    <div class="start-screen">
+      <div class="start-title">チャクラ診断</div>
+      <div class="start-subtitle">CHAKRA DIAGNOSIS</div>
+      <div class="chakra-preview">
+        <div class="chakra-preview-dot" style="background:#e05a5a;"></div>
+        <div class="chakra-preview-dot" style="background:#e07a2f;"></div>
+        <div class="chakra-preview-dot" style="background:#d4b800;"></div>
+        <div class="chakra-preview-dot" style="background:#4caf7d;"></div>
+        <div class="chakra-preview-dot" style="background:#4a9fd4;"></div>
+        <div class="chakra-preview-dot" style="background:#6a5fd4;"></div>
+        <div class="chakra-preview-dot" style="background:#9b5fc0;"></div>
+      </div>
+      <div class="start-desc">
+        7つのエネルギーセンター（チャクラ）の<br>
+        状態を診断します。<br>
+        直感で答えてください。
+      </div>
+      <button class="btn-start" onclick="startQuiz()">診断スタート</button>
+    </div>
+  </div>
+
+  <!-- 質問画面 -->
+  <div class="screen" id="screen-question">
+    <div class="question-screen">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <div class="question-header">
+        <div class="chakra-badge" id="chakra-badge">
+          <div class="chakra-badge-dot" id="badge-dot"></div>
+          <span id="badge-name"></span>
+        </div>
+        <div class="question-num" id="question-num"></div>
+      </div>
+      <div class="question-text" id="question-text"></div>
+      <div class="choices" id="choices"></div>
+    </div>
+  </div>
+
+  <!-- 結果画面 -->
+  <div class="screen" id="screen-result">
+    <div class="result-screen">
+      <div class="result-title">あなたのチャクラ</div>
+      <div class="result-subtitle">YOUR CHAKRA RESULT</div>
+      <div class="highlight-row" id="highlight-row"></div>
+      <div class="body-figure-wrap" id="body-figure"></div>
+      <div class="chakra-bars" id="chakra-bars"></div>
+      <div class="advice-section-title">チャクラ別アドバイス</div>
+      <div class="advice-cards" id="advice-cards"></div>
+      <button class="btn-retry" onclick="restart()">もう一度診断する</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CHAKRAS = [
+  {
+    id: 'root', name: '第1チャクラ', subname: 'ルート',
+    color: '#e05a5a',
+    questions: [
+      '毎日の生活に安心感や安定感を感じることができている',
+      '住む場所や仕事など、生活の基盤が整っていると感じる',
+      '身体の調子が良く、食事や睡眠を大切にできている',
+      '将来への不安よりも、今この瞬間に根ざした感覚がある',
+      '自分の身体と地面のつながりを感じ、どっしりとしていられる',
+    ],
+    advice: {
+      high: '大地のエネルギーがしっかりと根付いています。安定した基盤があなたの力の源です。この安心感を周囲の人にも分かち合いましょう。',
+      low: '安全や安定への不安が強まっているかもしれません。自然の中で裸足で歩く、規則正しい食事など、地に足のついた習慣を取り入れてみてください。',
+      mid: 'ある程度の安定感はありますが、まだ揺らぎがあります。毎日のルーティンを作り、心身の基盤を少しずつ整えましょう。'
+    }
+  },
+  {
+    id: 'sacral', name: '第2チャクラ', subname: 'サクラル',
+    color: '#e07a2f',
+    questions: [
+      '感情を豊かに表現し、創造的な活動を楽しめている',
+      '喜びや楽しさを日常の中で素直に感じられている',
+      '人との親密な関わりを心地よく感じられる',
+      '自分の欲求や好みを大切にし、素直に満たそうとしている',
+      '新しいアイデアや表現が自然と湧き出てくる感覚がある',
+    ],
+    advice: {
+      high: '感情の流れが豊かで、創造性が輝いています。あなたの表現力は周りの人に喜びと活力を与えます。アートや音楽など、創造的な活動を続けましょう。',
+      low: '感情の流れが滞っている可能性があります。ダンス、料理、絵を描くなど、身体を使った創造的な活動で内なるエネルギーを解放してみてください。',
+      mid: '感情表現のバランスを取り始めています。自分の気持ちを日記に書いたり、好きなことに少し時間を使うことで、さらに開いていけます。'
+    }
+  },
+  {
+    id: 'solar', name: '第3チャクラ', subname: 'ソーラー',
+    color: '#d4b800',
+    questions: [
+      '自分の意思で決断し、自信を持って行動できている',
+      '目標に向かって粘り強く取り組むことができる',
+      '他人の意見に流されず、自分の軸を保てている',
+      '自分の強みや能力を信じ、堂々と発揮できている',
+      '困難な状況でも諦めずに前に進む力がある',
+    ],
+    advice: {
+      high: '意志の力と自信が力強く輝いています。リーダーシップを発揮し、目標に向かって積極的に進んでいきましょう。あなたの行動力が周りを動かします。',
+      low: '自信や自己主張が弱まっているかもしれません。小さな決断を自分でする練習から始めてみてください。太陽のポーズや深呼吸も効果的です。',
+      mid: '少しずつ自分の力を取り戻しています。「できた」という小さな成功体験を積み重ねることで、内なる太陽がより輝き始めます。'
+    }
+  },
+  {
+    id: 'heart', name: '第4チャクラ', subname: 'ハート',
+    color: '#4caf7d',
+    questions: [
+      '人を愛し、自分自身も愛することができていると感じる',
+      '他人の痛みや喜びに共感し、思いやりを持って接することができる',
+      '過去の出来事や相手を許し、手放すことができている',
+      '人間関係において、与えることと受け取ることのバランスが取れている',
+      '自分のことを無条件に受け入れ、大切にできている',
+    ],
+    advice: {
+      high: '愛と調和のエネルギーが溢れています。自他への思いやりが深く、人間関係に温かさをもたらしています。この愛を広げ続けてください。',
+      low: '自己愛や他者への愛が閉じ気味かもしれません。まず自分に優しくすることから始めましょう。感謝の気持ちを意識すると、心が少しずつ開いていきます。',
+      mid: '愛のエネルギーが育ちつつあります。毎日1つ、自分や誰かへの感謝を見つける習慣がハートを開くきっかけになります。'
+    }
+  },
+  {
+    id: 'throat', name: '第5チャクラ', subname: 'スロート',
+    color: '#4a9fd4',
+    questions: [
+      '自分の思いや考えを正直に言葉で伝えることができている',
+      '会話の中で、自分の本音を安心して話せている',
+      '相手の話をしっかりと聞き、誠実にコミュニケーションが取れている',
+      'ノーと言うべき場面で、きちんと断ることができている',
+      '自分の声や言葉に力があると感じ、人に届いていると思える',
+    ],
+    advice: {
+      high: '真実の声が明確に響いています。あなたのコミュニケーション能力は人を動かす力を持っています。言葉の力を大切に、誠実な対話を続けましょう。',
+      low: '自分の気持ちを言葉にすることに難しさを感じているかもしれません。日記を書く、歌う、音読するなど、声を使う習慣でスロートチャクラを開きましょう。',
+      mid: '表現力が少しずつ育っています。「伝えたい」という気持ちを大切にしながら、小さな場面で正直な言葉を選ぶ練習を続けましょう。'
+    }
+  },
+  {
+    id: 'thirdeye', name: '第6チャクラ', subname: 'サードアイ',
+    color: '#6a5fd4',
+    questions: [
+      '直感や洞察力を信頼し、物事の本質を見抜けている',
+      '夢や閃きなど、内なるメッセージを意識することがある',
+      '先入観にとらわれず、広い視野で物事を見ることができる',
+      '目に見えない世界やエネルギーの存在を感じることがある',
+      '自分の内側に静けさを保ち、混乱の中でも中心を失わない',
+    ],
+    advice: {
+      high: '直感と洞察力が研ぎ澄まされています。見えないものを感じ取る力が強く、人生の道筋を内側から照らしています。瞑想でさらに深めていきましょう。',
+      low: '直感を信頼することが難しい状態かもしれません。静かな時間を作り、頭の情報をいったん手放す練習をしてみましょう。夢日記も助けになります。',
+      mid: '直感の芽が育ち始めています。「なんとなく」という感覚を大切にしながら、自分の内なる声に少しずつ耳を傾けていきましょう。'
+    }
+  },
+  {
+    id: 'crown', name: '第7チャクラ', subname: 'クラウン',
+    color: '#9b5fc0',
+    questions: [
+      '大いなる存在とつながっていると感じ、人生に意味を見出せている',
+      '今この瞬間に感謝し、宇宙の流れを信頼できている',
+      '自分を超えた何か大きなものとつながっている感覚がある',
+      '人生の出来事には意味があると感じ、流れに委ねられている',
+      '静寂の中に深い平和と一体感を感じることができる',
+    ],
+    advice: {
+      high: '宇宙とのつながりが深く開いています。高い意識と精神性があなたを導いています。このつながりを日々の生活にも活かし、周囲に光をもたらしましょう。',
+      low: '人生の意味や目的が見えにくくなっているかもしれません。瞑想、自然の中でのひとり時間、または精神的な書物との対話がつながりを取り戻す助けになります。',
+      mid: 'より高い次元への扉が少し開き始めています。感謝と祈りの時間を持つことで、宇宙のエネルギーとの共鳴がより深まっていきます。'
+    }
+  }
+];
+
+const CHOICES = [
+  { label: 'とてもそう思う', score: 4 },
+  { label: '少しそう思う', score: 3 },
+  { label: 'あまり思わない', score: 2 },
+  { label: '思わない', score: 1 }
+];
+
+// 全質問をフラット化: { chakraIdx, questionText }
+const ALL_QUESTIONS = CHAKRAS.flatMap((ch, ci) =>
+  ch.questions.map(q => ({ chakraIdx: ci, text: q }))
+);
+
+let currentQ = 0;
+let rawScores = []; // ALL_QUESTIONS順のスコア
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function startQuiz() {
+  currentQ = 0;
+  rawScores = [];
+  showScreen('screen-question');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const total = ALL_QUESTIONS.length;
+  const q = ALL_QUESTIONS[currentQ];
+  const chakra = CHAKRAS[q.chakraIdx];
+  const pct = (currentQ / total) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('badge-dot').style.background = chakra.color;
+  document.getElementById('badge-name').textContent = chakra.subname;
+  document.getElementById('question-num').textContent = `${currentQ + 1} / ${total}`;
+  document.getElementById('question-text').textContent = q.text;
+
+  const choicesEl = document.getElementById('choices');
+  choicesEl.innerHTML = '';
+  CHOICES.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerHTML = `<span>${c.label}</span><span class="choice-score">${c.score}点</span>`;
+    btn.onclick = () => selectChoice(c.score);
+    choicesEl.appendChild(btn);
+  });
+}
+
+function selectChoice(score) {
+  rawScores.push(score);
+  currentQ++;
+  if (currentQ < ALL_QUESTIONS.length) {
+    renderQuestion();
+  } else {
+    showResult();
+  }
+}
+
+function showResult() {
+  document.getElementById('progress-bar').style.width = '100%';
+  showScreen('screen-result');
+
+  // チャクラごとに平均スコアを集計
+  const chakraScores = CHAKRAS.map((_, ci) => {
+    const qs = ALL_QUESTIONS.map((q, i) => q.chakraIdx === ci ? rawScores[i] : null).filter(x => x !== null);
+    const avg = qs.reduce((a, b) => a + b, 0) / qs.length;
+    return avg;
+  });
+  const pcts = chakraScores.map(s => Math.round(((s - 1) / 3) * 100));
+
+  // 最強・最弱
+  let maxIdx = 0, minIdx = 0;
+  pcts.forEach((p, i) => {
+    if (p > pcts[maxIdx]) maxIdx = i;
+    if (p < pcts[minIdx]) minIdx = i;
+  });
+
+  // ハイライト
+  const hlRow = document.getElementById('highlight-row');
+  hlRow.innerHTML = `
+    <div class="highlight-card strong">
+      <div class="highlight-label">✦ 最も強いチャクラ</div>
+      <div class="highlight-name" style="color:${CHAKRAS[maxIdx].color}">${CHAKRAS[maxIdx].subname}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:4px;">${CHAKRAS[maxIdx].name}</div>
+      <div class="highlight-pct">${pcts[maxIdx]}%</div>
+    </div>
+    <div class="highlight-card weak">
+      <div class="highlight-label">▽ 最も弱いチャクラ</div>
+      <div class="highlight-name" style="color:${CHAKRAS[minIdx].color}">${CHAKRAS[minIdx].subname}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:4px;">${CHAKRAS[minIdx].name}</div>
+      <div class="highlight-pct">${pcts[minIdx]}%</div>
+    </div>
+  `;
+
+  // 人体SVG
+  renderBodyFigure(pcts, maxIdx, minIdx);
+
+  // スコアバー
+  const barsEl = document.getElementById('chakra-bars');
+  barsEl.innerHTML = CHAKRAS.map((ch, i) => `
+    <div class="chakra-bar-row">
+      <div class="chakra-bar-dot" style="background:${ch.color};"></div>
+      <div class="chakra-bar-name">${ch.subname}</div>
+      <div class="chakra-bar-track">
+        <div class="chakra-bar-fill" style="width:${pcts[i]}%;background:${ch.color};"></div>
+      </div>
+      <div class="chakra-bar-pct">${pcts[i]}%</div>
+    </div>
+  `).join('');
+
+  // アドバイス
+  const advEl = document.getElementById('advice-cards');
+  advEl.innerHTML = CHAKRAS.map((ch, i) => {
+    const p = pcts[i];
+    const advKey = p >= 67 ? 'high' : p >= 34 ? 'mid' : 'low';
+    const border = i === maxIdx ? `border-color:${ch.color}40;` : i === minIdx ? 'border-color:rgba(255,255,255,0.05);' : '';
+    return `
+      <div class="advice-card" style="${border}">
+        <div class="advice-card-header">
+          <div class="advice-card-dot" style="background:${ch.color};"></div>
+          <div class="advice-card-name">${ch.subname}<span style="font-size:11px;color:rgba(255,255,255,0.35);font-weight:400;margin-left:6px;">${ch.name}</span></div>
+          <div class="advice-card-pct">${p}%</div>
+        </div>
+        <div class="advice-card-text">${ch.advice[advKey]}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderBodyFigure(pcts, maxIdx, minIdx) {
+  // チャクラの体上のY座標（上から）
+  const chakraY = [68, 105, 140, 172, 205, 232, 252];
+  const cx = 100;
+
+  const circles = CHAKRAS.map((ch, i) => {
+    const p = pcts[i];
+    const r = 8 + (p / 100) * 18;
+    const opacity = 0.4 + (p / 100) * 0.6;
+    const glow = i === maxIdx ? `filter:drop-shadow(0 0 ${r}px ${ch.color});` : '';
+    return `<circle cx="${cx}" cy="${chakraY[i]}" r="${r}" fill="${ch.color}" opacity="${opacity}" style="${glow}"/>`;
+  }).join('');
+
+  const svgHTML = `
+    <svg width="200" height="320" viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="bg-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="rgba(124,58,237,0.08)"/>
+          <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
+        </radialGradient>
+      </defs>
+
+      <!-- 人体シルエット -->
+      <g fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1">
+        <!-- 頭 -->
+        <ellipse cx="100" cy="38" rx="22" ry="26" fill="rgba(255,255,255,0.04)"/>
+        <!-- 首 -->
+        <rect x="93" y="62" width="14" height="14" rx="4" fill="rgba(255,255,255,0.04)"/>
+        <!-- 胴体 -->
+        <path d="M70,76 L130,76 L136,190 L64,190 Z" fill="rgba(255,255,255,0.04)"/>
+        <!-- 左腕 -->
+        <path d="M70,80 L48,82 L42,165 L54,165 L62,90" fill="rgba(255,255,255,0.04)"/>
+        <!-- 右腕 -->
+        <path d="M130,80 L152,82 L158,165 L146,165 L138,90" fill="rgba(255,255,255,0.04)"/>
+        <!-- 左脚 -->
+        <path d="M80,190 L74,280 L88,280 L100,210" fill="rgba(255,255,255,0.04)"/>
+        <!-- 右脚 -->
+        <path d="M120,190 L126,280 L112,280 L100,210" fill="rgba(255,255,255,0.04)"/>
+      </g>
+
+      <!-- チャクラ中心線 -->
+      <line x1="${cx}" y1="52" x2="${cx}" y2="260" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="3,4"/>
+
+      <!-- チャクラ円 -->
+      ${circles}
+    </svg>
+  `;
+  document.getElementById('body-figure').innerHTML = svgHTML;
+}
+
+function restart() {
+  showScreen('screen-start');
+}
+</script>
+</body>
+</html>
